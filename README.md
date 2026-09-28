@@ -38,6 +38,7 @@ A Discord bot for running peer reviews and recurring announcements in a server. 
 - **Scheduling:** a 30-second loop that checks stored next-run times, so schedules survive restarts and
   missed posts are sent once (not repeatedly) after downtime
 - **Hosting:** a single always-on Linux VM running the bot as a systemd service
+- **CI/CD:** GitHub Actions checks every push to `main`, then deploys it to the VM over SSH
 
 ## Project layout
 
@@ -60,5 +61,7 @@ src/
     ready.js             # On connect: starts the scheduler, prunes departed members
     guildMemberRemove.js # Removes people from the randomizer when they leave
     interactionCreate.js # Routes slash commands (and enforces restricted access)
+scripts/deploy.sh        # Runs on the server during deploys (pull, install, restart)
+.github/workflows/       # CI/CD: check + auto-deploy on push to main
 data/db.json             # Created automatically; git-ignored
 ```
