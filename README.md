@@ -5,9 +5,11 @@ A Discord bot for running peer reviews and recurring announcements in a server. 
 
 ## Features
 
-- **Review randomizer.** Keep a list of members and shuffle them into a single review circle on demand:
+- **Review randomizer.** Keep a list of members and shuffle them into a single review circle:
   A reviews B, B reviews C, … and the last person reviews A. Everyone gives and gets exactly one review.
 - **Scheduled messages.** Post predefined messages to a channel on a repeating interval (minutes to weeks).
+- **Weekly review pairings.** Every Monday at 7 PM (Philippine time), post a fresh review circle with one thread
+  per pairing. When weekly updates are also on, the pairings go out first, then the updates thread.
 - **Weekly updates.** Every Monday at 7 PM (Philippine time), post a message in a channel, start a thread on it,
   and ping everyone in the randomizer list to post their update there within 6 hours.
 - **Role-based access.** Sensitive commands are limited to a configurable manager role (plus server admins).
@@ -24,7 +26,9 @@ A Discord bot for running peer reviews and recurring announcements in a server. 
 | `/commands` | List all commands |
 | `/ping` | Check the bot is alive + latency |
 | `/server` | Show server info |
-| `/randomizer [channel]` 🔒 | Shuffle everyone into one review circle and post it in `channel` (default: `#reviews-and-updates`): an announcement, then one message per pairing with its own thread |
+| `/randomizer start [channel]` 🔒 | Post the review pairings every Monday at 7 PM (Philippine time) in `channel` (default: `#reviews-and-updates`): an announcement, then one message per pairing with its own thread |
+| `/randomizer stop` 🔒 | Stop the weekly review pairings |
+| `/randomizer test [channel]` 🔒 | Post the review pairings right now (doesn't change the schedule) |
 | `/randomizer-list` | Show who's in the randomizer |
 | `/randomizer-add user` 🔒 | Add someone to the randomizer |
 | `/randomizer-delete user` 🔒 | Remove someone from the randomizer |
@@ -54,15 +58,16 @@ src/
   lib/
     loadModules.js       # Auto-loads every .js file in a folder (recursively)
     store.js             # JSON-file storage (data/db.json)
-    randomizer.js        # Shuffle + circular pairing logic
-    scheduler.js         # Sends scheduled messages (and the weekly updates thread) when they're due
-    updates.js           # Weekly updates: next Monday 7 PM run time + posting the thread
+    randomizer.js        # Shuffle + circular pairing logic, posts the pairings + threads
+    scheduler.js         # Sends scheduled messages and the weekly posts when they're due
+    weekly.js            # Monday 7 PM jobs (randomizer + updates) and their start/stop/test commands
+    updates.js           # Posts the weekly updates message + thread
     access.js            # Manager-role check for restricted commands
     channels.js          # Finds #reviews-and-updates (or the chosen channel) + thread permission check
     membership.js        # Removes departed members from the randomizer
   commands/
     utility/             # commands, ping, server, set-manager-role
-    randomizer/          # randomizer, randomizer-list/add/delete
+    randomizer/          # randomizer (start/stop/test), randomizer-list/add/delete
     schedule/            # schedule-add/list/delete
     updates/             # updates (start/stop/test)
   events/

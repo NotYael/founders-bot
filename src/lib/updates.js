@@ -1,19 +1,6 @@
 import { ThreadAutoArchiveDuration } from 'discord.js';
 
-export const UPDATE_WINDOW_MS = 6 * 3_600_000;
-
-// Monday 7:00 PM in the Philippines (UTC+8, no daylight saving) is Monday 11:00 UTC
-const RUN_DAY = 1;
-const RUN_HOUR_UTC = 11;
-
-/** Next Monday 7 PM Philippine time strictly after `after` (a timestamp in ms). */
-export function nextUpdatesRun(after = Date.now()) {
-  const d = new Date(after);
-  const run = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), RUN_HOUR_UTC));
-  run.setUTCDate(run.getUTCDate() + ((RUN_DAY - run.getUTCDay() + 7) % 7));
-  if (run.getTime() <= after) run.setUTCDate(run.getUTCDate() + 7);
-  return run.getTime();
-}
+const UPDATE_WINDOW_MS = 6 * 3_600_000;
 
 /** Posts the weekly updates message, starts a thread on it, and pings everyone in the randomizer list. */
 export async function postUpdates(channel, userIds) {

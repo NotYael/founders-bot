@@ -1,5 +1,5 @@
 import { allGuilds, save } from './store.js';
-import { nextUpdatesRun, postUpdates, UPDATE_WINDOW_MS } from './updates.js';
+import { LATE_LIMIT_MS, nextWeeklyRun, WEEKLY_JOBS } from './weekly.js';
 
 const CHECK_EVERY_MS = 30_000;
 
@@ -25,46 +25,63 @@ export function formatInterval(ms) {
  * using setInterval per message) means schedules survive bot restarts and work for long intervals.
  */
 export function startScheduler(client) {
+  let running = false;
+
   const tick = async () => {
-    const now = Date.now();
-    let changed = false;
-
-    for (const [, guild] of allGuilds()) {
-      for (const schedule of guild.schedules) {
-        if (schedule.nextRunAt > now) continue;
-
-        try {
-          const channel = await client.channels.fetch(schedule.channelId);
-          await channel.send(schedule.message);
-        } catch (error) {
-          console.error(`Scheduled message #${schedule.id} failed:`, error.message);
-        }
-
-        // Skip any runs missed while the bot was offline instead of spamming them all at once
-        while (schedule.nextRunAt <= now) schedule.nextRunAt += schedule.intervalMs;
-        changed = true;
-      }
-
-      const { updates } = guild;
-      if (updates && updates.nextRunAt <= now) {
-        // Post late if the bot was down at 7 PM, but not once the 6-hour window is over
-        if (now - updates.nextRunAt < UPDATE_WINDOW_MS) {
-          try {
-            const channel = await client.channels.fetch(updates.channelId);
-            await postUpdates(channel, guild.randomizer);
-          } catch (error) {
-            console.error('Weekly updates failed:', error.message);
-          }
-        }
-
-        updates.nextRunAt = nextUpdatesRun(now);
-        changed = true;
-      }
+    // A slow round (e.g. posting many threads) must not overlap the next one, or posts could double up
+    if (running) return;
+    running = true;
+    try {
+      await runDue(client);
+    } finally {
+      running = false;
     }
-
-    if (changed) save();
   };
 
   tick();
   setInterval(tick, CHECK_EVERY_MS);
+}
+
+async function runDue(client) {
+  const now = Date.now();
+  let changed = false;
+
+  for (const [, guild] of allGuilds()) {
+    for (const schedule of guild.schedules) {
+      if (schedule.nextRunAt > now) continue;
+
+      try {
+        const channel = await client.channels.fetch(schedule.channelId);
+        await channel.send(schedule.message);
+      } catch (error) {
+        console.error(`Scheduled message #${schedule.id} failed:`, error.message);
+      }
+
+      // Skip any runs missed while the bot was offline instead of spamming them all at once
+      while (schedule.nextRunAt <= now) schedule.nextRunAt += schedule.intervalMs;
+      changed = true;
+    }
+
+    for (const job of WEEKLY_JOBS) {
+      const schedule = guild[job.storeKey];
+      if (!schedule || schedule.nextRunAt > now) continue;
+
+      // Post late if the bot was down at 7 PM, but not more than 6 hours late
+      if (now - schedule.nextRunAt < LATE_LIMIT_MS) {
+        try {
+          const error = job.validate(guild);
+          if (error) throw new Error(error);
+          const channel = await client.channels.fetch(schedule.channelId);
+          await job.post(channel, guild);
+        } catch (error) {
+          console.error(`Weekly ${job.label} failed:`, error.message);
+        }
+      }
+
+      schedule.nextRunAt = nextWeeklyRun(now);
+      changed = true;
+    }
+  }
+
+  if (changed) save();
 }

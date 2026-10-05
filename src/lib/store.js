@@ -10,7 +10,7 @@ const DATA_FILE = path.join(DATA_DIR, 'db.json');
 const db = existsSync(DATA_FILE) ? JSON.parse(readFileSync(DATA_FILE, 'utf8')) : { guilds: {} };
 
 export function getGuild(guildId) {
-  db.guilds[guildId] ??= { randomizer: [], schedules: [], nextScheduleId: 1, managerRoleId: null, updates: null };
+  db.guilds[guildId] ??= { randomizer: [], schedules: [], nextScheduleId: 1, managerRoleId: null, updates: null, randomizerSchedule: null };
   return db.guilds[guildId];
 }
 
