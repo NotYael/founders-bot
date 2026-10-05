@@ -1,4 +1,5 @@
 import { allGuilds, save } from './store.js';
+import { nextUpdatesRun, postUpdates, UPDATE_WINDOW_MS } from './updates.js';
 
 const CHECK_EVERY_MS = 30_000;
 
@@ -41,6 +42,22 @@ export function startScheduler(client) {
 
         // Skip any runs missed while the bot was offline instead of spamming them all at once
         while (schedule.nextRunAt <= now) schedule.nextRunAt += schedule.intervalMs;
+        changed = true;
+      }
+
+      const { updates } = guild;
+      if (updates && updates.nextRunAt <= now) {
+        // Post late if the bot was down at 7 PM, but not once the 6-hour window is over
+        if (now - updates.nextRunAt < UPDATE_WINDOW_MS) {
+          try {
+            const channel = await client.channels.fetch(updates.channelId);
+            await postUpdates(channel, guild.randomizer);
+          } catch (error) {
+            console.error('Weekly updates failed:', error.message);
+          }
+        }
+
+        updates.nextRunAt = nextUpdatesRun(now);
         changed = true;
       }
     }
