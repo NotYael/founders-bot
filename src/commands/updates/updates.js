@@ -1,43 +1,13 @@
+import { InteractionContextType, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import {
-  ChannelType,
-  InteractionContextType,
-  MessageFlags,
-  PermissionFlagsBits,
-  SlashCommandBuilder,
-} from 'discord.js';
+  DEFAULT_CHANNEL_NAME,
+  MISSING_PERMS_MESSAGE,
+  missingThreadPerms,
+  POSTABLE_CHANNEL_TYPES,
+  resolveChannel,
+} from '../../lib/channels.js';
 import { getGuild, save } from '../../lib/store.js';
 import { nextUpdatesRun, postUpdates } from '../../lib/updates.js';
-
-const REQUIRED_PERMS = [
-  PermissionFlagsBits.ViewChannel,
-  PermissionFlagsBits.SendMessages,
-  PermissionFlagsBits.CreatePublicThreads,
-  PermissionFlagsBits.SendMessagesInThreads,
-];
-
-const DEFAULT_CHANNEL_NAME = 'reviews-and-updates';
-
-/** The channel picked in the command, else the scheduled one (for test), else #reviews-and-updates. */
-async function resolveChannel(interaction, scheduledChannelId) {
-  const picked = interaction.options.getChannel('channel');
-  if (picked) return picked;
-
-  if (scheduledChannelId) {
-    const scheduled = await interaction.guild.channels.fetch(scheduledChannelId).catch(() => null);
-    if (scheduled) return scheduled;
-  }
-
-  const channels = await interaction.guild.channels.fetch();
-  return (
-    channels.find(
-      (c) => c?.name === DEFAULT_CHANNEL_NAME && [ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(c.type),
-    ) ?? null
-  );
-}
-
-function missingPerms(channel, me) {
-  return !channel.permissionsFor(me)?.has(REQUIRED_PERMS);
-}
 
 export default {
   restricted: true,
@@ -53,7 +23,7 @@ export default {
           o
             .setName('channel')
             .setDescription(`Where to post (default: #${DEFAULT_CHANNEL_NAME})`)
-            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
+            .addChannelTypes(...POSTABLE_CHANNEL_TYPES),
         ),
     )
     .addSubcommand((s) => s.setName('stop').setDescription('Stop the weekly updates thread.'))
@@ -65,7 +35,7 @@ export default {
           o
             .setName('channel')
             .setDescription(`Where to post (default: the scheduled channel, else #${DEFAULT_CHANNEL_NAME})`)
-            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
+            .addChannelTypes(...POSTABLE_CHANNEL_TYPES),
         ),
     ),
 
@@ -83,9 +53,9 @@ export default {
           });
           return;
         }
-        if (missingPerms(channel, me)) {
+        if (missingThreadPerms(channel, me)) {
           await interaction.reply({
-            content: `I need permission to send messages, create public threads, and send messages in threads in ${channel}.`,
+            content: MISSING_PERMS_MESSAGE(channel),
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -123,9 +93,9 @@ export default {
           });
           return;
         }
-        if (missingPerms(channel, me)) {
+        if (missingThreadPerms(channel, me)) {
           await interaction.reply({
-            content: `I need permission to send messages, create public threads, and send messages in threads in ${channel}.`,
+            content: MISSING_PERMS_MESSAGE(channel),
             flags: MessageFlags.Ephemeral,
           });
           return;

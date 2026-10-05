@@ -22,6 +22,6 @@ export default {
     guild.schedules.splice(index, 1);
     save();
 
-    await interaction.reply({ content: `Deleted scheduled message #${id}.`, flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: `Stopped scheduled message #${id}. Messages it already posted are kept.`, flags: MessageFlags.Ephemeral });
   },
 };

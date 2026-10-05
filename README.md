@@ -24,7 +24,7 @@ A Discord bot for running peer reviews and recurring announcements in a server. 
 | `/commands` | List all commands |
 | `/ping` | Check the bot is alive + latency |
 | `/server` | Show server info |
-| `/randomizer` 🔒 | Shuffle everyone in the list into one review circle and ping them with their pairings |
+| `/randomizer [channel]` 🔒 | Shuffle everyone into one review circle and post it in `channel` (default: `#reviews-and-updates`): an announcement, then one message per pairing with its own thread |
 | `/randomizer-list` | Show who's in the randomizer |
 | `/randomizer-add user` 🔒 | Add someone to the randomizer |
 | `/randomizer-delete user` 🔒 | Remove someone from the randomizer |
@@ -58,6 +58,7 @@ src/
     scheduler.js         # Sends scheduled messages (and the weekly updates thread) when they're due
     updates.js           # Weekly updates: next Monday 7 PM run time + posting the thread
     access.js            # Manager-role check for restricted commands
+    channels.js          # Finds #reviews-and-updates (or the chosen channel) + thread permission check
     membership.js        # Removes departed members from the randomizer
   commands/
     utility/             # commands, ping, server, set-manager-role
